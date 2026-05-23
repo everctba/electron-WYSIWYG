@@ -2,7 +2,7 @@
     --bg-color: #f0f0f0;
     --sidebar-width: 200px;
     --header-height: 50px;
-    --canvas-bg: #808080;
+    --canvas-bg: #4e4e4e;
     --accent-color: #000080;
 }
 
@@ -78,6 +78,12 @@ html {
     background: #fff;
 }
 
+.widget-item.active {
+    background: #000080;
+    color: white;
+    border-color: #000;
+}
+
 .canvas-area {
     flex: 1;
     background: var(--canvas-bg);
@@ -107,6 +113,31 @@ html {
 
 .gui-widget.selected {
     outline: 1px solid #000080;
+}
+
+.drawing-preview {
+    position: absolute;
+    border: 1px dashed #000080;
+    background: rgba(0, 0, 128, 0.05);
+    z-index: 9999;
+    pointer-events: none;
+}
+
+.marquee-selection {
+    position: absolute;
+    border: 1px dotted #000;
+    background: rgba(0, 0, 0, 0.05);
+    z-index: 9999;
+    pointer-events: none;
+}
+
+.gui-group {
+    border: 1px dashed #888;
+    background: rgba(136, 136, 136, 0.05);
+}
+
+.gui-group:hover {
+    border-color: #000080;
 }
 
 /* Resizing Handlers (VB6 Style) */

@@ -9,17 +9,108 @@ class RetroBuilder {
         this.canvas = document.getElementById('canvas');
         this.themeSelector = document.getElementById('theme-selector');
         this.widgets = [];
-        this.selectedWidget = null;
+        this.selectedWidgets = [];
         this.snapSize = 8;
         this.maxZIndex = 100;
         this.minZIndex = 100;
+        this.activeTool = null;
+        this.isDrawing = false;
+        this.isSelecting = false;
+        this.drawStartX = 0;
+        this.drawStartY = 0;
+        this.drawingPreview = null;
 
         this.init();
+        this.loadProject(); // Carregar projeto salvo ao iniciar
     }
 
     init() {
         this.setupEventListeners();
         this.setupDragAndDrop();
+        
+        // Timer de auto-save a cada 5 segundos
+        setInterval(() => this.saveProject(), 5000);
+    }
+
+    saveProject() {
+        const projectData = {
+            theme: this.themeSelector.value,
+            maxZIndex: this.maxZIndex,
+            minZIndex: this.minZIndex,
+            canvasHTML: this.canvas.innerHTML,
+            // Guardamos a lista de widgets para reconstruir as referências se necessário
+            widgetsCount: this.widgets.length
+        };
+        
+        localStorage.setItem('retro-builder-project', JSON.stringify(projectData));
+        console.log('Projeto salvo automaticamente às ' + new Date().toLocaleTimeString());
+    }
+
+    loadProject() {
+        const savedData = localStorage.getItem('retro-builder-project');
+        if (!savedData) return;
+
+        try {
+            const project = JSON.parse(savedData);
+            
+            // Restaurar Tema
+            this.themeSelector.value = project.theme || 'win95';
+            document.body.className = `theme-${this.themeSelector.value}`;
+            
+            // Restaurar Contadores de Z-Index
+            this.maxZIndex = project.maxZIndex || 100;
+            this.minZIndex = project.minZIndex || 100;
+            
+            // Restaurar Canvas
+            this.canvas.innerHTML = project.canvasHTML;
+            
+            // Limpar handlers de redimensionamento e seleções que podem ter ficado no HTML salvo
+            const legacyHandles = this.canvas.querySelectorAll('.resize-handle');
+            legacyHandles.forEach(h => h.remove());
+            const legacySelected = this.canvas.querySelectorAll('.selected');
+            legacySelected.forEach(s => s.classList.remove('selected'));
+            const legacyPreviews = this.canvas.querySelectorAll('.drawing-preview, .marquee-selection');
+            legacyPreviews.forEach(p => p.remove());
+
+            // Re-vincular eventos aos widgets restaurados
+            this.widgets = [];
+            const restoredWidgets = this.canvas.querySelectorAll('.gui-widget');
+            restoredWidgets.forEach(w => {
+                this.widgets.push(w);
+                this.attachWidgetEvents(w);
+            });
+
+            console.log('Projeto restaurado com sucesso!');
+        } catch (e) {
+            console.error('Erro ao carregar projeto salvo:', e);
+        }
+    }
+
+    attachWidgetEvents(el) {
+        // Remove listeners antigos se houver (para evitar duplicidade)
+        const newEl = el.cloneNode(true);
+        el.parentNode.replaceChild(newEl, el);
+        
+        newEl.addEventListener('mousedown', (e) => this.startDragging(e, newEl));
+        newEl.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.selectWidget(newEl, e.shiftKey || e.ctrlKey);
+        });
+        
+        // Se for um grupo, precisamos garantir que os filhos também sejam tratados corretamente
+        if (newEl.classList.contains('gui-group')) {
+            const children = newEl.querySelectorAll('.gui-widget');
+            children.forEach(c => {
+                // Filhos de grupos não precisam de eventos diretos no canvas principal,
+                // o grupo pai gerencia o arrasto. Mas mantemos por segurança.
+                c.addEventListener('click', (e) => e.stopPropagation());
+            });
+        }
+
+        // Atualizar referência na lista global
+        const index = this.widgets.indexOf(el);
+        if (index > -1) this.widgets[index] = newEl;
+        else this.widgets.push(newEl);
     }
 
     setupEventListeners() {
@@ -31,27 +122,178 @@ class RetroBuilder {
             this.exportLayout();
         });
 
-        // Deselect when clicking canvas
-        this.canvas.addEventListener('click', (e) => {
-            if (e.target === this.canvas) {
-                this.selectWidget(null);
+        // Canvas events for Drawing, Selection & Marquee
+        this.canvas.addEventListener('mousedown', (e) => {
+            if (this.activeTool) {
+                this.startDrawing(e);
+            } else if (e.target === this.canvas) {
+                if (!e.shiftKey && !e.ctrlKey) {
+                    this.clearSelection();
+                }
+                this.startMarquee(e);
             }
         });
 
-        // Delete widget on Delete key
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Delete' && this.selectedWidget) {
-                this.selectedWidget.remove();
-                this.widgets = this.widgets.filter(w => w !== this.selectedWidget);
-                this.selectWidget(null);
+        this.canvas.addEventListener('mousemove', (e) => {
+            if (this.isDrawing) {
+                this.updateDrawing(e);
+            } else if (this.isSelecting) {
+                this.updateMarquee(e);
             }
         });
+
+        window.addEventListener('mouseup', (e) => {
+            if (this.isDrawing) {
+                this.finishDrawing(e);
+            } else if (this.isSelecting) {
+                this.finishMarquee(e);
+            }
+        });
+
+        // Keyboard events
+        window.addEventListener('keydown', (e) => {
+            // Grouping: Ctrl+G
+            if (e.ctrlKey && e.key.toLowerCase() === 'g') {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                this.groupSelected();
+                return;
+            }
+
+            // Ungrouping: Alt+G
+            if (e.altKey && e.key.toLowerCase() === 'g') {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                this.ungroupSelected();
+                return;
+            }
+
+            // Delete widget
+            if (e.key === 'Delete' && this.selectedWidgets.length > 0) {
+                this.selectedWidgets.forEach(w => {
+                    w.remove();
+                    this.widgets = this.widgets.filter(item => item !== w);
+                });
+                this.clearSelection();
+                this.saveProject(); // Salvar após deletar
+            }
+            
+            // ESC to cancel tool
+            if (e.key === 'Escape') {
+                this.setTool(null);
+            }
+        }, true); // Use capture phase to intercept before browser defaults if possible
+    }
+
+    setTool(type) {
+        this.activeTool = type;
+        const items = document.querySelectorAll('.widget-item');
+        items.forEach(item => {
+            if (item.dataset.type === type) {
+                item.classList.add('active');
+            } else {
+                item.classList.remove('active');
+            }
+        });
+        
+        // Change cursor on canvas
+        this.canvas.style.cursor = type ? 'crosshair' : 'default';
+    }
+
+    startDrawing(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        this.isDrawing = true;
+        this.drawStartX = Math.round((e.clientX - rect.left) / this.snapSize) * this.snapSize;
+        this.drawStartY = Math.round((e.clientY - rect.top) / this.snapSize) * this.snapSize;
+
+        this.drawingPreview = document.createElement('div');
+        this.drawingPreview.className = 'drawing-preview';
+        this.drawingPreview.style.left = `${this.drawStartX}px`;
+        this.drawingPreview.style.top = `${this.drawStartY}px`;
+        this.canvas.appendChild(this.drawingPreview);
+    }
+
+    updateDrawing(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        let currentX = Math.round((e.clientX - rect.left) / this.snapSize) * this.snapSize;
+        let currentY = Math.round((e.clientY - rect.top) / this.snapSize) * this.snapSize;
+
+        const width = currentX - this.drawStartX;
+        const height = currentY - this.drawStartY;
+
+        this.drawingPreview.style.width = `${Math.abs(width)}px`;
+        this.drawingPreview.style.height = `${Math.abs(height)}px`;
+        this.drawingPreview.style.left = `${width < 0 ? currentX : this.drawStartX}px`;
+        this.drawingPreview.style.top = `${height < 0 ? currentY : this.drawStartY}px`;
+    }
+
+    finishDrawing(e) {
+        this.isDrawing = false;
+        const finalWidth = parseInt(this.drawingPreview.style.width);
+        const finalHeight = parseInt(this.drawingPreview.style.height);
+        const finalX = parseInt(this.drawingPreview.style.left);
+        const finalY = parseInt(this.drawingPreview.style.top);
+
+        this.drawingPreview.remove();
+        this.drawingPreview = null;
+
+        if (finalWidth > 5 && finalHeight > 5) {
+            const widget = this.addWidget(this.activeTool, finalX, finalY);
+            widget.style.width = `${finalWidth}px`;
+            widget.style.height = `${finalHeight}px`;
+            this.updatePropertiesPanel(widget);
+        }
+
+        this.setTool(null);
+    }
+
+    startMarquee(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        this.isSelecting = true;
+        this.drawStartX = e.clientX - rect.left;
+        this.drawStartY = e.clientY - rect.top;
+
+        this.drawingPreview = document.createElement('div');
+        this.drawingPreview.className = 'marquee-selection';
+        this.drawingPreview.style.left = `${this.drawStartX}px`;
+        this.drawingPreview.style.top = `${this.drawStartY}px`;
+        this.canvas.appendChild(this.drawingPreview);
+    }
+
+    updateMarquee(e) {
+        this.updateDrawing(e); // Reuse logic for visual box
+    }
+
+    finishMarquee(e) {
+        this.isSelecting = false;
+        const rect = this.drawingPreview.getBoundingClientRect();
+
+        // Select widgets inside the marquee
+        this.widgets.forEach(w => {
+            const wRect = w.getBoundingClientRect();
+            if (
+                wRect.left >= rect.left &&
+                wRect.right <= rect.right &&
+                wRect.top >= rect.top &&
+                wRect.bottom <= rect.bottom
+            ) {
+                this.selectWidget(w, true);
+            }
+        });
+
+        this.drawingPreview.remove();
+        this.drawingPreview = null;
     }
 
     setupDragAndDrop() {
         const widgetItems = document.querySelectorAll('.widget-item');
         
         widgetItems.forEach(item => {
+            // Support both Click-to-Select and Drag-and-Drop
+            item.addEventListener('click', () => {
+                this.setTool(item.dataset.type);
+            });
+
             item.setAttribute('draggable', true);
             item.addEventListener('dragstart', (e) => {
                 e.dataTransfer.setData('widget-type', item.dataset.type);
@@ -133,21 +375,115 @@ class RetroBuilder {
         this.canvas.appendChild(widgetEl);
         this.widgets.push(widgetEl);
         this.selectWidget(widgetEl);
+        this.saveProject(); // Salvar imediatamente ao adicionar
+        return widgetEl;
     }
 
-    selectWidget(el) {
-        if (this.selectedWidget) {
-            this.selectedWidget.classList.remove('selected');
-            this.removeResizeHandles(this.selectedWidget);
+    selectWidget(el, multi = false) {
+        if (!multi) {
+            this.clearSelection();
         }
-        this.selectedWidget = el;
-        if (el) {
+
+        if (el && !this.selectedWidgets.includes(el)) {
+            this.selectedWidgets.push(el);
             el.classList.add('selected');
             this.addResizeHandles(el);
-            this.updatePropertiesPanel(el);
+        } else if (el && multi) {
+            // Toggle if multi-selecting
+            this.selectedWidgets = this.selectedWidgets.filter(w => w !== el);
+            el.classList.remove('selected');
+            this.removeResizeHandles(el);
+        }
+
+        const lastSelected = this.selectedWidgets[this.selectedWidgets.length - 1];
+        if (lastSelected) {
+            this.updatePropertiesPanel(lastSelected);
         } else {
             document.getElementById('properties-panel').innerHTML = '<p class="empty-msg">Selecione um widget</p>';
         }
+    }
+
+    clearSelection() {
+        this.selectedWidgets.forEach(w => {
+            w.classList.remove('selected');
+            this.removeResizeHandles(w);
+        });
+        this.selectedWidgets = [];
+        document.getElementById('properties-panel').innerHTML = '<p class="empty-msg">Selecione um widget</p>';
+    }
+
+    groupSelected() {
+        if (this.selectedWidgets.length < 2) return;
+
+        // Calculate bounding box of selected widgets
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        this.selectedWidgets.forEach(w => {
+            const x = parseInt(w.style.left);
+            const y = parseInt(w.style.top);
+            const width = parseInt(w.style.width);
+            const height = parseInt(w.style.height);
+            minX = Math.min(minX, x);
+            minY = Math.min(minY, y);
+            maxX = Math.max(maxX, x + width);
+            maxY = Math.max(maxY, y + height);
+        });
+
+        // Create group container
+        const groupEl = document.createElement('div');
+        groupEl.className = 'gui-widget gui-group';
+        groupEl.style.left = `${minX}px`;
+        groupEl.style.top = `${minY}px`;
+        groupEl.style.width = `${maxX - minX}px`;
+        groupEl.style.height = `${maxY - minY}px`;
+        groupEl.style.zIndex = ++this.maxZIndex;
+        groupEl.setAttribute('data-type', 'group');
+
+        // Move widgets into group
+        this.selectedWidgets.forEach(w => {
+            const x = parseInt(w.style.left) - minX;
+            const y = parseInt(w.style.top) - minY;
+            w.style.left = `${x}px`;
+            w.style.top = `${y}px`;
+            groupEl.appendChild(w);
+            // Remove from global widgets list since it's now inside a group
+            this.widgets = this.widgets.filter(item => item !== w);
+        });
+
+        groupEl.addEventListener('mousedown', (e) => this.startDragging(e, groupEl));
+        groupEl.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.selectWidget(groupEl, e.shiftKey || e.ctrlKey);
+        });
+
+        this.canvas.appendChild(groupEl);
+        this.widgets.push(groupEl);
+        this.clearSelection();
+        this.selectWidget(groupEl);
+        this.saveProject(); // Salvar após agrupar
+    }
+
+    ungroupSelected() {
+        this.selectedWidgets.forEach(group => {
+            if (!group.classList.contains('gui-group')) return;
+
+            const groupX = parseInt(group.style.left);
+            const groupY = parseInt(group.style.top);
+            const children = Array.from(group.children).filter(c => c.classList.contains('gui-widget'));
+
+            children.forEach(w => {
+                const x = parseInt(w.style.left) + groupX;
+                const y = parseInt(w.style.top) + groupY;
+                w.style.left = `${x}px`;
+                w.style.top = `${y}px`;
+                this.canvas.appendChild(w);
+                this.widgets.push(w);
+            });
+
+            group.remove();
+            this.widgets = this.widgets.filter(item => item !== group);
+        });
+        this.clearSelection();
+        this.saveProject(); // Salvar após desagrupar
     }
 
     addResizeHandles(el) {
@@ -219,6 +555,7 @@ class RetroBuilder {
         const onMouseUp = () => {
             document.removeEventListener('mousemove', onMouseMove);
             document.removeEventListener('mouseup', onMouseUp);
+            this.saveProject(); // Salvar ao terminar de arrastar/duplicar
         };
 
         document.addEventListener('mousemove', onMouseMove);
@@ -227,28 +564,90 @@ class RetroBuilder {
 
     startDragging(e, el) {
         e.preventDefault();
-        this.selectWidget(el);
+        
+        // If the clicked element is not in selection, select it (unless multi-selecting)
+        if (!this.selectedWidgets.includes(el)) {
+            this.selectWidget(el, e.shiftKey || e.ctrlKey);
+        }
 
-        const rect = el.getBoundingClientRect();
-        const offsetX = e.clientX - rect.left;
-        const offsetY = e.clientY - rect.top;
+        const startX = e.clientX;
+        const startY = e.clientY;
+        let hasDuplicated = false;
+
+        // Snapshot the current selection to ensure stable duplication
+        let targetWidgets = [...this.selectedWidgets];
+
+        const initialPositions = targetWidgets.map(w => ({
+            el: w,
+            left: parseInt(w.style.left) || 0,
+            top: parseInt(w.style.top) || 0
+        }));
 
         const onMouseMove = (moveEvent) => {
-            const canvasRect = this.canvas.getBoundingClientRect();
-            let x = moveEvent.clientX - canvasRect.left - offsetX;
-            let y = moveEvent.clientY - canvasRect.top - offsetY;
+            const dx = moveEvent.clientX - startX;
+            const dy = moveEvent.clientY - startY;
 
-            // Snap to grid
-            x = Math.round(x / this.snapSize) * this.snapSize;
-            y = Math.round(y / this.snapSize) * this.snapSize;
+            // Check for Alt key duplication on first move
+            if (moveEvent.altKey && !hasDuplicated && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
+                const newClones = [];
+                targetWidgets.forEach(w => {
+                    const clone = w.cloneNode(true);
+                    
+                    // Reset selection visual and handlers on clone
+                    clone.classList.remove('selected');
+                    const handles = clone.querySelectorAll('.resize-handle');
+                    handles.forEach(h => h.remove());
 
-            el.style.left = `${x}px`;
-            el.style.top = `${y}px`;
+                    // Re-add essential listeners to the new clone
+                    clone.addEventListener('mousedown', (dragEv) => this.startDragging(dragEv, clone));
+                    clone.addEventListener('click', (clickEv) => {
+                        clickEv.stopPropagation();
+                        this.selectWidget(clone, clickEv.shiftKey || clickEv.ctrlKey);
+                    });
+
+                    // Ensure clone has a high Z-Index
+                    clone.style.zIndex = ++this.maxZIndex;
+
+                    this.canvas.appendChild(clone);
+                    this.widgets.push(clone);
+                    newClones.push(clone);
+                });
+                
+                // Switch current editor selection to the clones
+                this.clearSelection();
+                newClones.forEach(c => this.selectWidget(c, true));
+                
+                hasDuplicated = true;
+                // Update targetWidgets to point to clones so the rest of the drag moves them
+                targetWidgets = newClones;
+                return; 
+            }
+
+            initialPositions.forEach((pos, index) => {
+                const currentEl = targetWidgets[index];
+                if (!currentEl) return;
+
+                let x = pos.left + dx;
+                let y = pos.top + dy;
+
+                // Snap to grid
+                x = Math.round(x / this.snapSize) * this.snapSize;
+                y = Math.round(y / this.snapSize) * this.snapSize;
+
+                currentEl.style.left = `${x}px`;
+                currentEl.style.top = `${y}px`;
+            });
+
+            const lastSelected = targetWidgets[targetWidgets.length - 1];
+            if (lastSelected) {
+                this.updatePropertiesPanel(lastSelected);
+            }
         };
 
         const onMouseUp = () => {
             document.removeEventListener('mousemove', onMouseMove);
             document.removeEventListener('mouseup', onMouseUp);
+            this.saveProject(); // Salvar ao terminar de redimensionar
         };
 
         document.addEventListener('mousemove', onMouseMove);
@@ -266,6 +665,20 @@ class RetroBuilder {
                 <div class="prop-group">
                     <label>Progresso (%):</label>
                     <input type="number" value="${parseInt(currentProgress)}" id="prop-progress" min="0" max="100">
+                </div>
+            `;
+        }
+
+        if (el.querySelector('.btn-retro')) {
+            const btn = el.querySelector('.btn-retro');
+            extraProps += `
+                <div class="prop-group">
+                    <label>Estado do Botão:</label>
+                    <select id="prop-btn-state">
+                        <option value="normal" ${!btn.classList.contains('focused') && !btn.disabled ? 'selected' : ''}>Normal</option>
+                        <option value="focused" ${btn.classList.contains('focused') ? 'selected' : ''}>Focado (XP Blue)</option>
+                        <option value="disabled" ${btn.disabled || btn.classList.contains('disabled') ? 'selected' : ''}>Desabilitado</option>
+                    </select>
                 </div>
             `;
         }
@@ -355,6 +768,25 @@ class RetroBuilder {
                 if (fill) fill.style.width = `${e.target.value}%`;
             });
         }
+
+        if (document.getElementById('prop-btn-state')) {
+            document.getElementById('prop-btn-state').addEventListener('change', (e) => {
+                const btn = el.querySelector('.btn-retro');
+                if (!btn) return;
+                
+                // Reset states
+                btn.classList.remove('focused', 'disabled');
+                btn.disabled = false;
+                
+                if (e.target.value === 'focused') {
+                    btn.classList.add('focused');
+                } else if (e.target.value === 'disabled') {
+                    btn.classList.add('disabled');
+                    btn.disabled = true;
+                }
+                this.saveProject(); // Salvar após mudar estado
+            });
+        }
     }
 
     getWidgetText(el) {
@@ -420,6 +852,7 @@ class RetroBuilder {
         // Estilos essenciais para exportação
         const base = `
             .gui-widget { position: absolute; font-family: sans-serif; }
+            .gui-group { border: none; background: none; }
             .progressbar-fill { height: 100%; transition: width 0.3s; }
             [data-hint] { position: relative; }
             [data-hint]::after {
@@ -437,6 +870,8 @@ class RetroBuilder {
             win95: `
                 .theme-win95 .btn-retro { background: #c0c0c0; border: 2px solid; border-color: #fff #000 #000 #fff; padding: 4px 10px; }
                 .theme-win95 .btn-retro:hover { background: #d4d0c8; }
+                .theme-win95 .btn-retro.focused { outline: 1px dotted #000; outline-offset: -4px; }
+                .theme-win95 .btn-retro:disabled, .theme-win95 .btn-retro.disabled { color: #808080; text-shadow: 1px 1px #fff; cursor: not-allowed; }
                 .theme-win95 .input-retro { background: #fff; border: 2px solid; border-color: #808080 #fff #fff #808080; padding: 2px 4px; }
                 .theme-win95 .groupbox-retro { border: 2px solid #808080; position: relative; padding: 15px 10px 10px; box-shadow: 1px 1px #fff, inset 1px 1px #fff; }
                 .theme-win95 .groupbox-title { position: absolute; top: -8px; left: 10px; background: #c0c0c0; padding: 0 4px; font-size: 11px; }
@@ -463,6 +898,8 @@ class RetroBuilder {
             xp: `
                 .theme-xp .btn-retro { background: linear-gradient(180deg, #ffffff 0%, #ece9d8 100%); border: 1px solid #003c74; border-radius: 3px; padding: 4px 14px; }
                 .theme-xp .btn-retro:hover { background: linear-gradient(180deg, #fff 0%, #ffad55 100%); border-color: #ff8e00; }
+                .theme-xp .btn-retro.focused { border-color: #ff8e00; box-shadow: inset 0 0 0 1px #ff8e00, inset 0 0 0 2px #fff; }
+                .theme-xp .btn-retro:disabled, .theme-xp .btn-retro.disabled { background: #f5f5f5; border-color: #ccc; color: #999; cursor: not-allowed; }
                 .theme-xp .groupbox-retro { border: 1px solid #d0d0bf; border-radius: 4px; padding: 15px 10px 10px; position: relative; }
                 .theme-xp .groupbox-title { position: absolute; top: -8px; left: 10px; background: #ece9d8; padding: 0 3px; color: #0046d5; font-weight: bold; }
                 .theme-xp .progressbar-retro { background: #fff; border: 1px solid #6b9cde; height: 16px; padding: 1px; }

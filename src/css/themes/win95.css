@@ -31,6 +31,20 @@
     box-shadow: inset 1px 1px var(--theme-border-dark);
 }
 
+/* Win95 Button Focus State */
+.theme-win95 .btn-retro.focused {
+    outline: 1px dotted #000;
+    outline-offset: -4px;
+}
+
+/* Win95 Button Disabled State */
+.theme-win95 .btn-retro:disabled,
+.theme-win95 .btn-retro.disabled {
+    color: #808080;
+    text-shadow: 1px 1px #fff;
+    cursor: not-allowed;
+}
+
 /* Win95 Input Style */
 .theme-win95 .input-retro {
     background: #fff;
