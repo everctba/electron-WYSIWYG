@@ -737,11 +737,24 @@ class RetroBuilder {
                     <label>Estado do Botão:</label>
                     <select id="prop-btn-state">
                         <option value="normal" ${!btn.classList.contains('focused') && !btn.disabled ? 'selected' : ''}>Normal</option>
-                        <option value="focused" ${btn.classList.contains('focused') ? 'selected' : ''}>Focado (XP Blue)</option>
+                        <option value="focused" ${btn.classList.contains('focused') ? 'selected' : ''}>Focado</option>
                         <option value="disabled" ${btn.disabled || btn.classList.contains('disabled') ? 'selected' : ''}>Desabilitado</option>
                     </select>
                 </div>
             `;
+
+            // Adicionar opção de cor se o tema for Aqua
+            if (this.themeSelector.value === 'apple-aqua') {
+                extraProps += `
+                    <div class="prop-group">
+                        <label>Cor Aqua:</label>
+                        <select id="prop-aqua-color">
+                            <option value="graphite" ${!btn.classList.contains('aqua-blue') ? 'selected' : ''}>Grafite (Padrão)</option>
+                            <option value="blue" ${btn.classList.contains('aqua-blue') ? 'selected' : ''}>Azul Gummy</option>
+                        </select>
+                    </div>
+                `;
+            }
         }
 
         panel.innerHTML = `
@@ -846,6 +859,20 @@ class RetroBuilder {
                     btn.disabled = true;
                 }
                 this.saveProject(); // Salvar após mudar estado
+            });
+        }
+
+        if (document.getElementById('prop-aqua-color')) {
+            document.getElementById('prop-aqua-color').addEventListener('change', (e) => {
+                const btn = el.querySelector('.btn-retro');
+                if (!btn) return;
+                
+                if (e.target.value === 'blue') {
+                    btn.classList.add('aqua-blue');
+                } else {
+                    btn.classList.remove('aqua-blue');
+                }
+                this.saveProject(); // Salvar após mudar cor
             });
         }
     }
@@ -965,8 +992,18 @@ class RetroBuilder {
                 .theme-xp .groupbox-title { position: absolute; top: -8px; left: 10px; background: #ece9d8; padding: 0 3px; color: #0046d5; font-weight: bold; }
                 .theme-xp .progressbar-retro { background: #fff; border: 1px solid #6b9cde; height: 16px; padding: 1px; }
                 .theme-xp .progressbar-fill { background: linear-gradient(90deg, #21a121 0%, #a2e0a2 50%, #21a121 100%); background-size: 20px 100%; }
-            `
-        };
+            `,
+            'apple-aqua': `
+                .theme-apple-aqua .btn-retro { background: linear-gradient(180deg, #ffffff 0%, #b5b5b5 50%, #d5d5d5 100%); border: 1px solid #777; border-radius: 20px; padding: 4px 20px; }
+                .theme-apple-aqua .btn-retro.focused { box-shadow: 0 0 5px #3875d7; border-color: #2c5ba3; }
+                .theme-apple-aqua .input-retro { background: #fff; border: 1px solid #999; border-radius: 4px; padding: 3px 8px; }
+                .theme-apple-aqua .groupbox-retro { border: 1px solid #ccc; background: rgba(255, 255, 255, 0.3); border-radius: 8px; padding: 20px 10px 10px; position: relative; }
+                .theme-apple-aqua .groupbox-title { position: absolute; top: 5px; left: 15px; font-weight: bold; font-size: 11px; color: #555; }
+                .theme-apple-aqua .progressbar-retro { background: #e0e0e2; border: 1px solid #999; border-radius: 10px; height: 14px; overflow: hidden; }
+                .theme-apple-aqua .progressbar-fill { background: linear-gradient(180deg, #7ebcf6 0%, #3875d7 100%); border-radius: 10px; }
+                .theme-apple-aqua .btn-retro.aqua-blue { background: linear-gradient(180deg, #7ebcf6 0%, #3875d7 100%); border-color: #2c5ba3; color: #fff; text-shadow: 0 -1px 0 rgba(0,0,0,0.3); }
+             `
+          };
 
         return base + (themes[theme] || '');
     }
