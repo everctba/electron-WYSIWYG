@@ -91,19 +91,16 @@ class RetroBuilder {
         const newEl = el.cloneNode(true);
         el.parentNode.replaceChild(newEl, el);
         
-        newEl.addEventListener('mousedown', (e) => this.startDragging(e, newEl));
-        newEl.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.selectWidget(newEl, e.shiftKey || e.ctrlKey);
+        newEl.addEventListener('mousedown', (e) => {
+            e.stopPropagation(); // Evita mousedown no canvas
+            this.startDragging(e, newEl);
         });
         
-        // Se for um grupo, precisamos garantir que os filhos também sejam tratados corretamente
+        // Se for um grupo, precisamos garantir que os filhos não interceptem o mousedown do pai
         if (newEl.classList.contains('gui-group')) {
             const children = newEl.querySelectorAll('.gui-widget');
             children.forEach(c => {
-                // Filhos de grupos não precisam de eventos diretos no canvas principal,
-                // o grupo pai gerencia o arrasto. Mas mantemos por segurança.
-                c.addEventListener('click', (e) => e.stopPropagation());
+                c.style.pointerEvents = 'none'; // Filhos de grupo não recebem eventos, o grupo pai trata tudo
             });
         }
 
@@ -366,10 +363,9 @@ class RetroBuilder {
         }
 
         widgetEl.innerHTML = content;
-        widgetEl.addEventListener('mousedown', (e) => this.startDragging(e, widgetEl));
-        widgetEl.addEventListener('click', (e) => {
+        widgetEl.addEventListener('mousedown', (e) => {
             e.stopPropagation();
-            this.selectWidget(widgetEl);
+            this.startDragging(e, widgetEl);
         });
 
         this.canvas.appendChild(widgetEl);
@@ -380,16 +376,28 @@ class RetroBuilder {
     }
 
     selectWidget(el, multi = false) {
+        if (!el) {
+            this.clearSelection();
+            return;
+        }
+
+        // Se o elemento clicado faz parte de um grupo, selecionamos o grupo pai (raiz)
+        let root = el;
+        while (root.parentElement && root.parentElement.classList.contains('gui-widget')) {
+            root = root.parentElement;
+        }
+        el = root;
+
         if (!multi) {
             this.clearSelection();
         }
 
-        if (el && !this.selectedWidgets.includes(el)) {
+        if (!this.selectedWidgets.includes(el)) {
             this.selectedWidgets.push(el);
             el.classList.add('selected');
             this.addResizeHandles(el);
-        } else if (el && multi) {
-            // Toggle if multi-selecting
+        } else if (multi) {
+            // Toggle se já estiver selecionado no modo multi
             this.selectedWidgets = this.selectedWidgets.filter(w => w !== el);
             el.classList.remove('selected');
             this.removeResizeHandles(el);
@@ -564,17 +572,30 @@ class RetroBuilder {
 
     startDragging(e, el) {
         e.preventDefault();
-        
-        // If the clicked element is not in selection, select it (unless multi-selecting)
-        if (!this.selectedWidgets.includes(el)) {
-            this.selectWidget(el, e.shiftKey || e.ctrlKey);
+
+        // Se o elemento clicado faz parte de um grupo, selecionamos o grupo pai (raiz)
+        let root = el;
+        while (root.parentElement && root.parentElement.classList.contains('gui-widget')) {
+            root = root.parentElement;
+        }
+        el = root;
+
+        const isMulti = e.shiftKey || e.ctrlKey;
+        const isAlreadySelected = this.selectedWidgets.includes(el);
+
+        // Lógica de seleção no mousedown
+        if (isMulti) {
+            this.selectWidget(el, true);
+        } else if (!isAlreadySelected) {
+            this.selectWidget(el, false);
         }
 
         const startX = e.clientX;
         const startY = e.clientY;
         let hasDuplicated = false;
+        let hasMoved = false;
 
-        // Snapshot the current selection to ensure stable duplication
+        // Snapshot the current selection to ensure stable duplication/movement
         let targetWidgets = [...this.selectedWidgets];
 
         const initialPositions = targetWidgets.map(w => ({
@@ -586,6 +607,10 @@ class RetroBuilder {
         const onMouseMove = (moveEvent) => {
             const dx = moveEvent.clientX - startX;
             const dy = moveEvent.clientY - startY;
+
+            if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+                hasMoved = true;
+            }
 
             // Check for Alt key duplication on first move
             if (moveEvent.altKey && !hasDuplicated && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
@@ -599,10 +624,9 @@ class RetroBuilder {
                     handles.forEach(h => h.remove());
 
                     // Re-add essential listeners to the new clone
-                    clone.addEventListener('mousedown', (dragEv) => this.startDragging(dragEv, clone));
-                    clone.addEventListener('click', (clickEv) => {
-                        clickEv.stopPropagation();
-                        this.selectWidget(clone, clickEv.shiftKey || clickEv.ctrlKey);
+                    clone.addEventListener('mousedown', (dragEv) => {
+                        dragEv.stopPropagation();
+                        this.startDragging(dragEv, clone);
                     });
 
                     // Ensure clone has a high Z-Index
@@ -647,7 +671,14 @@ class RetroBuilder {
         const onMouseUp = () => {
             document.removeEventListener('mousemove', onMouseMove);
             document.removeEventListener('mouseup', onMouseUp);
-            this.saveProject(); // Salvar ao terminar de redimensionar
+
+            // Se clicamos em algo já selecionado sem Shift e não movemos, 
+            // queremos que ele se torne a seleção única (limpa multi-seleção anterior)
+            if (!hasMoved && !isMulti && isAlreadySelected && this.selectedWidgets.length > 1) {
+                this.selectWidget(el, false);
+            }
+
+            this.saveProject();
         };
 
         document.addEventListener('mousemove', onMouseMove);
