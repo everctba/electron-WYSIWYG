@@ -32,6 +32,16 @@ class RetroBuilder {
         setInterval(() => this.saveProject(), 5000);
     }
 
+    newProject() {
+        if (confirm('Deseja realmente iniciar um novo projeto? Todos os elementos atuais serão removidos.')) {
+            this.canvas.innerHTML = '';
+            this.widgets = [];
+            this.clearSelection();
+            this.saveProject();
+            console.log('Novo projeto iniciado.');
+        }
+    }
+
     saveProject() {
         const projectData = {
             theme: this.themeSelector.value,
@@ -117,6 +127,10 @@ class RetroBuilder {
 
         document.getElementById('export-btn').addEventListener('click', () => {
             this.exportLayout();
+        });
+
+        document.getElementById('new-project-btn').addEventListener('click', () => {
+            this.newProject();
         });
 
         // Canvas events for Drawing, Selection & Marquee
@@ -265,15 +279,18 @@ class RetroBuilder {
         this.isSelecting = false;
         const rect = this.drawingPreview.getBoundingClientRect();
 
-        // Select widgets inside the marquee
+        // Selecionar widgets que interceptam a caixa de marquee
         this.widgets.forEach(w => {
             const wRect = w.getBoundingClientRect();
-            if (
-                wRect.left >= rect.left &&
-                wRect.right <= rect.right &&
-                wRect.top >= rect.top &&
-                wRect.bottom <= rect.bottom
-            ) {
+            // Lógica de intersecção: se as caixas se sobrepõem em qualquer ponto
+            const overlaps = !(
+                wRect.right < rect.left || 
+                wRect.left > rect.right || 
+                wRect.bottom < rect.top || 
+                wRect.top > rect.bottom
+            );
+
+            if (overlaps) {
                 this.selectWidget(w, true);
             }
         });
@@ -452,15 +469,15 @@ class RetroBuilder {
             const y = parseInt(w.style.top) - minY;
             w.style.left = `${x}px`;
             w.style.top = `${y}px`;
+            w.style.pointerEvents = 'none'; // Desabilitar eventos nos filhos do grupo
             groupEl.appendChild(w);
             // Remove from global widgets list since it's now inside a group
             this.widgets = this.widgets.filter(item => item !== w);
         });
 
-        groupEl.addEventListener('mousedown', (e) => this.startDragging(e, groupEl));
-        groupEl.addEventListener('click', (e) => {
+        groupEl.addEventListener('mousedown', (e) => {
             e.stopPropagation();
-            this.selectWidget(groupEl, e.shiftKey || e.ctrlKey);
+            this.startDragging(e, groupEl);
         });
 
         this.canvas.appendChild(groupEl);
@@ -471,6 +488,7 @@ class RetroBuilder {
     }
 
     ungroupSelected() {
+        const newSelection = [];
         this.selectedWidgets.forEach(group => {
             if (!group.classList.contains('gui-group')) return;
 
@@ -481,16 +499,30 @@ class RetroBuilder {
             children.forEach(w => {
                 const x = parseInt(w.style.left) + groupX;
                 const y = parseInt(w.style.top) + groupY;
+                
+                // Restaurar propriedades antes de re-vincular
                 w.style.left = `${x}px`;
                 w.style.top = `${y}px`;
+                w.style.pointerEvents = 'auto'; 
+                
+                // Mover para o canvas principal
                 this.canvas.appendChild(w);
-                this.widgets.push(w);
+                
+                // Re-vincular eventos (isso vai clonar o elemento e adicionar à lista widgets)
+                this.attachWidgetEvents(w);
+                
+                // Pegar a nova referência (clonada) para a seleção
+                const newlyAttached = this.widgets[this.widgets.length - 1];
+                newSelection.push(newlyAttached);
             });
 
             group.remove();
             this.widgets = this.widgets.filter(item => item !== group);
         });
+
         this.clearSelection();
+        // Manter os elementos que foram desagrupados selecionados
+        newSelection.forEach(w => this.selectWidget(w, true));
         this.saveProject(); // Salvar após desagrupar
     }
 
@@ -572,6 +604,7 @@ class RetroBuilder {
 
     startDragging(e, el) {
         e.preventDefault();
+        e.stopPropagation();
 
         // Se o elemento clicado faz parte de um grupo, selecionamos o grupo pai (raiz)
         let root = el;
@@ -596,13 +629,17 @@ class RetroBuilder {
         let hasMoved = false;
 
         // Snapshot the current selection to ensure stable duplication/movement
-        let targetWidgets = [...this.selectedWidgets];
+        // Filtramos para garantir que apenas elementos válidos no DOM sejam movidos
+        let targetWidgets = this.selectedWidgets.filter(w => document.body.contains(w));
 
         const initialPositions = targetWidgets.map(w => ({
             el: w,
             left: parseInt(w.style.left) || 0,
             top: parseInt(w.style.top) || 0
         }));
+
+        // Mudar cursor global para indicar arrasto
+        document.body.style.cursor = 'move';
 
         const onMouseMove = (moveEvent) => {
             const dx = moveEvent.clientX - startX;
@@ -618,18 +655,14 @@ class RetroBuilder {
                 targetWidgets.forEach(w => {
                     const clone = w.cloneNode(true);
                     
-                    // Reset selection visual and handlers on clone
                     clone.classList.remove('selected');
                     const handles = clone.querySelectorAll('.resize-handle');
                     handles.forEach(h => h.remove());
 
-                    // Re-add essential listeners to the new clone
                     clone.addEventListener('mousedown', (dragEv) => {
-                        dragEv.stopPropagation();
                         this.startDragging(dragEv, clone);
                     });
 
-                    // Ensure clone has a high Z-Index
                     clone.style.zIndex = ++this.maxZIndex;
 
                     this.canvas.appendChild(clone);
@@ -637,12 +670,10 @@ class RetroBuilder {
                     newClones.push(clone);
                 });
                 
-                // Switch current editor selection to the clones
                 this.clearSelection();
                 newClones.forEach(c => this.selectWidget(c, true));
                 
                 hasDuplicated = true;
-                // Update targetWidgets to point to clones so the rest of the drag moves them
                 targetWidgets = newClones;
                 return; 
             }
@@ -671,9 +702,8 @@ class RetroBuilder {
         const onMouseUp = () => {
             document.removeEventListener('mousemove', onMouseMove);
             document.removeEventListener('mouseup', onMouseUp);
+            document.body.style.cursor = 'default';
 
-            // Se clicamos em algo já selecionado sem Shift e não movemos, 
-            // queremos que ele se torne a seleção única (limpa multi-seleção anterior)
             if (!hasMoved && !isMulti && isAlreadySelected && this.selectedWidgets.length > 1) {
                 this.selectWidget(el, false);
             }

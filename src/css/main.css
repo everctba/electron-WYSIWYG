@@ -36,6 +36,21 @@ html {
     box-shadow: inset 1px 1px #fff;
 }
 
+.main-header .toolbar button,
+.main-header .toolbar select {
+    margin-left: 10px;
+    padding: 2px 8px;
+    font-size: 12px;
+    background: #d4d0c8;
+    border: 1px solid #808080;
+    box-shadow: inset 1px 1px #fff;
+    cursor: pointer;
+}
+
+.main-header .toolbar button:active {
+    box-shadow: inset 1px 1px #000;
+}
+
 .editor-container {
     display: flex;
     flex: 1;
