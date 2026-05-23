@@ -1,0 +1,71 @@
+.theme-apple-classic {
+    --theme-bg: #fff;
+    --theme-text: #000;
+    --theme-border: #000;
+    --theme-header-bg: #fff;
+}
+
+.theme-apple-classic .retro-canvas {
+    background-color: var(--theme-bg);
+    background-image: none;
+    border: 1px solid #000;
+}
+
+/* Apple Classic Button */
+.theme-apple-classic .btn-retro {
+    background: #fff;
+    border: 1px solid #000;
+    border-radius: 3px;
+    padding: 3px 12px;
+    font-family: "Geneva", "Charcoal", sans-serif;
+    font-size: 12px;
+    box-shadow: 1px 1px 0px #000;
+}
+
+.theme-apple-classic .btn-retro:active {
+    background: #000;
+    color: #fff;
+}
+
+/* Apple Classic Input */
+.theme-apple-classic .input-retro {
+    border: 1px solid #000;
+    padding: 2px 4px;
+    font-family: "Geneva", sans-serif;
+}
+
+/* Apple Classic GroupBox */
+.theme-apple-classic .groupbox-retro {
+    border: 1px solid #000;
+    padding: 15px 10px 10px 10px;
+    position: relative;
+    font-family: "Geneva", sans-serif;
+    font-size: 11px;
+}
+
+.theme-apple-classic .groupbox-retro .groupbox-title {
+    position: absolute;
+    top: -8px;
+    left: 10px;
+    background: #fff;
+    padding: 0 4px;
+    border: 1px solid #000;
+}
+
+/* Apple Classic ProgressBar */
+.theme-apple-classic .progressbar-retro {
+    background: #fff;
+    border: 1px solid #000;
+    height: 16px;
+    width: 150px;
+}
+
+.theme-apple-classic .progressbar-fill {
+    background: repeating-linear-gradient(45deg,
+            #000,
+            #000 2px,
+            #fff 2px,
+            #fff 4px);
+    height: 100%;
+    width: 50%;
+}

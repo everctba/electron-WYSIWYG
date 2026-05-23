@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retro GUI Builder - [Everson Mayer]</title>
+    <link rel="stylesheet" href="src/css/main.css">
+    <link rel="stylesheet" href="src/css/themes/win95.css">
+    <link rel="stylesheet" href="src/css/themes/apple-classic.css">
+    <link rel="stylesheet" href="src/css/themes/vista.css">
+    <link rel="stylesheet" href="src/css/themes/xp.css">
+</head>
+<body class="theme-win95">
+    <div id="app">
+        <header class="main-header">
+            <div class="logo">Retro GUI Builder</div>
+            <div class="toolbar">
+                <select id="theme-selector">
+                    <option value="win95">Windows 95</option>
+                    <option value="apple-classic">Apple Classic</option>
+                    <option value="vista">Windows Vista</option>
+                    <option value="xp">Windows XP</option>
+                </select>
+                <button id="export-btn">Exportar HTML/CSS</button>
+            </div>
+        </header>
+
+        <main class="editor-container">
+            <aside class="sidebar left-sidebar">
+                <div class="panel-header">Widgets</div>
+                <div class="widget-list">
+                    <div class="widget-item" data-type="button">Botão</div>
+                    <div class="widget-item" data-type="input">Campo de Texto</div>
+                    <div class="widget-item" data-type="label">Label</div>
+                    <div class="widget-item" data-type="checkbox">Checkbox</div>
+                    <div class="widget-item" data-type="groupbox">GroupBox</div>
+                    <div class="widget-item" data-type="progressbar">ProgressBar</div>
+                    <div class="widget-item" data-type="panel">Painel</div>
+                </div>
+            </aside>
+
+            <section class="canvas-area">
+                <div id="canvas" class="retro-canvas">
+                    <!-- Widgets serão dropados aqui -->
+                </div>
+            </section>
+
+            <aside class="sidebar right-sidebar">
+                <div class="panel-header">Propriedades</div>
+                <div id="properties-panel">
+                    <p class="empty-msg">Selecione um widget</p>
+                </div>
+            </aside>
+        </main>
+    </div>
+
+    <script src="src/js/main.js" type="module"></script>
+</body>
+</html>

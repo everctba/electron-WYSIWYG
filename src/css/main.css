@@ -1,0 +1,212 @@
+:root {
+    --bg-color: #f0f0f0;
+    --sidebar-width: 200px;
+    --header-height: 50px;
+    --canvas-bg: #808080;
+    --accent-color: #000080;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body,
+html {
+    height: 100%;
+    font-family: "Segoe UI", Tahoma, sans-serif;
+    overflow: hidden;
+}
+
+#app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+.main-header {
+    height: var(--header-height);
+    background: #ccc;
+    border-bottom: 2px solid #888;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 15px;
+    box-shadow: inset 1px 1px #fff;
+}
+
+.editor-container {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+.sidebar {
+    width: var(--sidebar-width);
+    background: #d4d0c8;
+    border: 2px solid #fff;
+    border-right: 2px solid #808080;
+    border-bottom: 2px solid #808080;
+    display: flex;
+    flex-direction: column;
+}
+
+.panel-header {
+    background: var(--accent-color);
+    color: white;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.widget-list {
+    padding: 10px;
+}
+
+.widget-item {
+    padding: 8px;
+    margin-bottom: 5px;
+    background: #eee;
+    border: 1px solid #999;
+    cursor: grab;
+    user-select: none;
+    font-size: 13px;
+}
+
+.widget-item:hover {
+    background: #fff;
+}
+
+.canvas-area {
+    flex: 1;
+    background: var(--canvas-bg);
+    padding: 20px;
+    overflow: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.retro-canvas {
+    width: 800px;
+    height: 600px;
+    background: var(--theme-bg);
+    position: relative;
+    box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.3);
+    /* Snap to grid visual */
+    background-image: radial-gradient(circle, #00000011 1px, transparent 1px);
+    background-size: 8px 8px;
+}
+
+/* Base style for any dropped widget */
+.gui-widget {
+    position: absolute;
+    cursor: move;
+}
+
+.gui-widget.selected {
+    outline: 1px solid #000080;
+}
+
+/* Resizing Handlers (VB6 Style) */
+.resize-handle {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    background: #000080;
+    border: 1px solid #fff;
+    z-index: 1000;
+}
+
+.resize-handle.nw {
+    top: -4px;
+    left: -4px;
+    cursor: nw-resize;
+}
+
+.resize-handle.n {
+    top: -4px;
+    left: calc(50% - 3px);
+    cursor: n-resize;
+}
+
+.resize-handle.ne {
+    top: -4px;
+    right: -4px;
+    cursor: ne-resize;
+}
+
+.resize-handle.w {
+    top: calc(50% - 3px);
+    left: -4px;
+    cursor: w-resize;
+}
+
+.resize-handle.e {
+    top: calc(50% - 3px);
+    right: -4px;
+    cursor: e-resize;
+}
+
+.resize-handle.sw {
+    bottom: -4px;
+    left: -4px;
+    cursor: sw-resize;
+}
+
+.resize-handle.s {
+    bottom: -4px;
+    left: calc(50% - 3px);
+    cursor: s-resize;
+}
+
+.resize-handle.se {
+    bottom: -4px;
+    right: -4px;
+    cursor: se-resize;
+}
+
+#properties-panel {
+    padding: 10px;
+}
+
+.prop-group {
+    margin-bottom: 12px;
+}
+
+.prop-group label {
+    display: block;
+    font-size: 11px;
+    margin-bottom: 4px;
+    color: #333;
+}
+
+.prop-group input {
+    width: 100%;
+    padding: 3px;
+    font-size: 12px;
+    border: 1px solid #999;
+}
+
+.layer-controls {
+    display: flex;
+    gap: 5px;
+    margin-top: 15px;
+}
+
+.tool-btn {
+    flex: 1;
+    padding: 5px;
+    font-size: 10px;
+    cursor: pointer;
+    background: #d4d0c8;
+    border: 1px solid #808080;
+    box-shadow: inset 1px 1px #fff;
+}
+
+.tool-btn:active {
+    box-shadow: inset 1px 1px #000;
+}
+
+/* Author footer or similar could go here */

@@ -1,0 +1,78 @@
+.theme-win95 {
+    --theme-bg: #c0c0c0;
+    --theme-text: #000;
+    --theme-border-light: #fff;
+    --theme-border-dark: #808080;
+    --theme-border-darkest: #000;
+}
+
+.theme-win95 .retro-canvas {
+    background-color: var(--theme-bg);
+}
+
+/* Win95 Button Style */
+.theme-win95 .btn-retro {
+    background: var(--theme-bg);
+    border-top: 2px solid var(--theme-border-light);
+    border-left: 2px solid var(--theme-border-light);
+    border-right: 2px solid var(--theme-border-darkest);
+    border-bottom: 2px solid var(--theme-border-darkest);
+    padding: 4px 10px;
+    font-family: "MS Sans Serif", Arial, sans-serif;
+    font-size: 12px;
+    box-shadow: inset -1px -1px var(--theme-border-dark), inset 1px 1px var(--theme-border-light);
+}
+
+.theme-win95 .btn-retro:active {
+    border-top: 2px solid var(--theme-border-darkest);
+    border-left: 2px solid var(--theme-border-darkest);
+    border-right: 2px solid var(--theme-border-light);
+    border-bottom: 2px solid var(--theme-border-light);
+    box-shadow: inset 1px 1px var(--theme-border-dark);
+}
+
+/* Win95 Input Style */
+.theme-win95 .input-retro {
+    background: #fff;
+    border-top: 2px solid var(--theme-border-dark);
+    border-left: 2px solid var(--theme-border-dark);
+    border-right: 2px solid var(--theme-border-light);
+    border-bottom: 2px solid var(--theme-border-light);
+    padding: 2px 4px;
+    font-size: 12px;
+}
+
+/* Win95 GroupBox */
+.theme-win95 .groupbox-retro {
+    border: 2px solid var(--theme-border-dark);
+    box-shadow: 1px 1px var(--theme-border-light), inset 1px 1px var(--theme-border-light);
+    padding: 15px 10px 10px 10px;
+    position: relative;
+    font-family: "MS Sans Serif", Arial, sans-serif;
+    font-size: 11px;
+}
+
+.theme-win95 .groupbox-retro .groupbox-title {
+    position: absolute;
+    top: -8px;
+    left: 10px;
+    background: var(--theme-bg);
+    padding: 0 4px;
+}
+
+/* Win95 ProgressBar */
+.theme-win95 .progressbar-retro {
+    background: var(--theme-bg);
+    border: 1px solid var(--theme-border-dark);
+    box-shadow: inset 1px 1px var(--theme-border-darkest);
+    height: 20px;
+    width: 150px;
+    padding: 2px;
+}
+
+.theme-win95 .progressbar-fill {
+    background: var(--accent-color);
+    height: 100%;
+    width: 50%;
+    /* Default */
+}

@@ -1,0 +1,15 @@
+{
+  "name": "retro-gui-builder",
+  "version": "1.0.0",
+  "description": "Retro GUI Builder for Electron",
+  "main": "electron-main.js",
+  "scripts": {
+    "start": "electron .",
+    "web": "npx serve ."
+  },
+  "author": "Everson Mayer",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^31.0.0"
+  }
+}

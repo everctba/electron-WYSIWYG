@@ -1,0 +1,102 @@
+.theme-vista {
+    --theme-bg: #e3e7f2;
+    --theme-text: #000;
+    --aero-glass: rgba(255, 255, 255, 0.4);
+    --aero-border: rgba(255, 255, 255, 0.6);
+    --vista-blue: #3a7ebf;
+}
+
+.theme-vista .retro-canvas {
+    background-color: var(--theme-bg);
+    background-image: linear-gradient(180deg, #c0d1e5 0%, #e3e7f2 100%);
+}
+
+/* Vista Aero Button */
+.theme-vista .btn-retro {
+    background: linear-gradient(180deg, #f2f2f2 0%, #ebebeb 50%, #dddddd 50%, #cfcfcf 100%);
+    border: 1px solid #707070;
+    border-radius: 3px;
+    padding: 4px 14px;
+    font-family: "Segoe UI", sans-serif;
+    font-size: 12px;
+    color: #000;
+    box-shadow: inset 0 1px 0 #fff, 0 1px 2px rgba(0,0,0,0.1);
+    transition: all 0.2s;
+}
+
+.theme-vista .btn-retro:hover {
+    border-color: #3c7fb1;
+    background: linear-gradient(180deg, #eaf6fd 0%, #d9f0fc 50%, #bee6fd 50%, #a7d9f5 100%);
+    box-shadow: inset 0 0 3px #fff, 0 0 5px rgba(60,127,177,0.5);
+}
+
+.theme-vista .btn-retro:active {
+    background: linear-gradient(180deg, #dae9f2 0%, #cce1ed 50%, #b6d3e6 50%, #aacbe1 100%);
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+}
+
+/* Vista Input */
+.theme-vista .input-retro {
+    background: #fff;
+    border: 1px solid #abadb3;
+    padding: 3px 5px;
+    font-family: "Segoe UI", sans-serif;
+    border-radius: 2px;
+}
+
+.theme-vista .input-retro:focus {
+    border-color: #3c7fb1;
+    outline: none;
+    box-shadow: 0 0 4px rgba(60,127,177,0.4);
+}
+
+/* Vista GroupBox (Aero Style) */
+.theme-vista .groupbox-retro {
+    border: 1px solid rgba(0,0,0,0.15);
+    background: var(--aero-glass);
+    backdrop-filter: blur(5px);
+    border-radius: 5px;
+    padding: 20px 10px 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05), inset 0 0 0 1px var(--aero-border);
+}
+
+.theme-vista .groupbox-title {
+    position: absolute;
+    top: 5px;
+    left: 12px;
+    font-family: "Segoe UI", sans-serif;
+    font-weight: 600;
+    font-size: 11px;
+    color: #1e395b;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.8);
+}
+
+/* Vista ProgressBar (Glassy) */
+.theme-vista .progressbar-retro {
+    background: #e6e6e6;
+    border: 1px solid #bcbcbc;
+    border-radius: 2px;
+    height: 18px;
+    overflow: hidden;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.theme-vista .progressbar-fill {
+    background: linear-gradient(180deg, #a7d9f5 0%, #3a7ebf 50%, #1e5799 100%);
+    height: 100%;
+    position: relative;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.3);
+}
+
+.theme-vista .progressbar-fill::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    animation: vista-shine 2s infinite;
+}
+
+@keyframes vista-shine {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(100%); }
+}
