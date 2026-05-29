@@ -256,3 +256,86 @@ html {
 }
 
 /* Author footer or similar could go here */
+
+/* Modal Overlay */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+}
+
+.modal-overlay.hidden {
+    display: none;
+}
+
+.retro-window {
+    background: #d4d0c8;
+    border: 2px solid;
+    border-color: #fff #808080 #808080 #fff;
+    width: 300px;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+}
+
+.modal-header {
+    background: #000080;
+    color: white;
+    padding: 3px 5px;
+    font-weight: bold;
+    font-size: 13px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-close-btn {
+    background: #c0c0c0;
+    border: 1px solid;
+    border-color: #fff #000 #000 #fff;
+    color: #000;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 11px;
+    padding: 0 4px;
+}
+
+.modal-close-btn:active {
+    border-color: #000 #fff #fff #000;
+}
+
+.modal-body {
+    padding: 15px;
+    font-size: 13px;
+}
+
+.radio-group {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.modal-footer {
+    padding: 10px 15px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    border-top: 1px solid #808080;
+}
+
+.btn-retro {
+    background: #c0c0c0;
+    border: 2px solid;
+    border-color: #fff #000 #000 #fff;
+    padding: 4px 10px;
+    cursor: pointer;
+}
+.btn-retro:active {
+    border-color: #000 #fff #fff #000;
+}

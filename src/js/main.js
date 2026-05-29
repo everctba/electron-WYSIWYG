@@ -27,7 +27,7 @@ class RetroBuilder {
     init() {
         this.setupEventListeners();
         this.setupDragAndDrop();
-        
+
         // Timer de auto-save a cada 5 segundos
         setInterval(() => this.saveProject(), 5000);
     }
@@ -51,7 +51,7 @@ class RetroBuilder {
             // Guardamos a lista de widgets para reconstruir as referências se necessário
             widgetsCount: this.widgets.length
         };
-        
+
         localStorage.setItem('retro-builder-project', JSON.stringify(projectData));
         console.log('Projeto salvo automaticamente às ' + new Date().toLocaleTimeString());
     }
@@ -62,18 +62,18 @@ class RetroBuilder {
 
         try {
             const project = JSON.parse(savedData);
-            
+
             // Restaurar Tema
             this.themeSelector.value = project.theme || 'win95';
             document.body.className = `theme-${this.themeSelector.value}`;
-            
+
             // Restaurar Contadores de Z-Index
             this.maxZIndex = project.maxZIndex || 100;
             this.minZIndex = project.minZIndex || 100;
-            
+
             // Restaurar Canvas
             this.canvas.innerHTML = project.canvasHTML;
-            
+
             // Limpar handlers de redimensionamento e seleções que podem ter ficado no HTML salvo
             const legacyHandles = this.canvas.querySelectorAll('.resize-handle');
             legacyHandles.forEach(h => h.remove());
@@ -100,12 +100,12 @@ class RetroBuilder {
         // Remove listeners antigos se houver (para evitar duplicidade)
         const newEl = el.cloneNode(true);
         el.parentNode.replaceChild(newEl, el);
-        
+
         newEl.addEventListener('mousedown', (e) => {
             e.stopPropagation(); // Evita mousedown no canvas
             this.startDragging(e, newEl);
         });
-        
+
         // Se for um grupo, precisamos garantir que os filhos não interceptem o mousedown do pai
         if (newEl.classList.contains('gui-group')) {
             const children = newEl.querySelectorAll('.gui-widget');
@@ -126,7 +126,25 @@ class RetroBuilder {
         });
 
         document.getElementById('export-btn').addEventListener('click', () => {
-            this.exportLayout();
+            this.openExportModal();
+        });
+
+        document.getElementById('close-modal-btn').addEventListener('click', () => {
+            this.closeExportModal();
+        });
+
+        document.getElementById('cancel-export-btn').addEventListener('click', () => {
+            this.closeExportModal();
+        });
+
+        document.getElementById('confirm-export-btn').addEventListener('click', () => {
+            const format = document.querySelector('input[name="export-format"]:checked').value;
+            if (format === 'html') {
+                this.exportLayout();
+            } else if (format === 'fxml') {
+                this.exportFXML();
+            }
+            this.closeExportModal();
         });
 
         document.getElementById('new-project-btn').addEventListener('click', () => {
@@ -188,7 +206,7 @@ class RetroBuilder {
                 this.clearSelection();
                 this.saveProject(); // Salvar após deletar
             }
-            
+
             // ESC to cancel tool
             if (e.key === 'Escape') {
                 this.setTool(null);
@@ -206,7 +224,7 @@ class RetroBuilder {
                 item.classList.remove('active');
             }
         });
-        
+
         // Change cursor on canvas
         this.canvas.style.cursor = type ? 'crosshair' : 'default';
     }
@@ -284,9 +302,9 @@ class RetroBuilder {
             const wRect = w.getBoundingClientRect();
             // Lógica de intersecção: se as caixas se sobrepõem em qualquer ponto
             const overlaps = !(
-                wRect.right < rect.left || 
-                wRect.left > rect.right || 
-                wRect.bottom < rect.top || 
+                wRect.right < rect.left ||
+                wRect.left > rect.right ||
+                wRect.bottom < rect.top ||
                 wRect.top > rect.bottom
             );
 
@@ -301,7 +319,7 @@ class RetroBuilder {
 
     setupDragAndDrop() {
         const widgetItems = document.querySelectorAll('.widget-item');
-        
+
         widgetItems.forEach(item => {
             // Support both Click-to-Select and Drag-and-Drop
             item.addEventListener('click', () => {
@@ -339,9 +357,9 @@ class RetroBuilder {
         widgetEl.style.left = `${x}px`;
         widgetEl.style.top = `${y}px`;
         widgetEl.style.zIndex = ++this.maxZIndex;
-        
+
         let content = '';
-        switch(type) {
+        switch (type) {
             case 'button':
                 widgetEl.style.width = '100px';
                 widgetEl.style.height = '30px';
@@ -499,18 +517,18 @@ class RetroBuilder {
             children.forEach(w => {
                 const x = parseInt(w.style.left) + groupX;
                 const y = parseInt(w.style.top) + groupY;
-                
+
                 // Restaurar propriedades antes de re-vincular
                 w.style.left = `${x}px`;
                 w.style.top = `${y}px`;
-                w.style.pointerEvents = 'auto'; 
-                
+                w.style.pointerEvents = 'auto';
+
                 // Mover para o canvas principal
                 this.canvas.appendChild(w);
-                
+
                 // Re-vincular eventos (isso vai clonar o elemento e adicionar à lista widgets)
                 this.attachWidgetEvents(w);
-                
+
                 // Pegar a nova referência (clonada) para a seleção
                 const newlyAttached = this.widgets[this.widgets.length - 1];
                 newSelection.push(newlyAttached);
@@ -654,7 +672,7 @@ class RetroBuilder {
                 const newClones = [];
                 targetWidgets.forEach(w => {
                     const clone = w.cloneNode(true);
-                    
+
                     clone.classList.remove('selected');
                     const handles = clone.querySelectorAll('.resize-handle');
                     handles.forEach(h => h.remove());
@@ -669,13 +687,13 @@ class RetroBuilder {
                     this.widgets.push(clone);
                     newClones.push(clone);
                 });
-                
+
                 this.clearSelection();
                 newClones.forEach(c => this.selectWidget(c, true));
-                
+
                 hasDuplicated = true;
                 targetWidgets = newClones;
-                return; 
+                return;
             }
 
             initialPositions.forEach((pos, index) => {
@@ -718,7 +736,7 @@ class RetroBuilder {
     updatePropertiesPanel(el) {
         const panel = document.getElementById('properties-panel');
         const widgetType = el.querySelector('[class*="-retro"]')?.className.split(' ')[0].split('-')[0] || 'widget';
-        
+
         let extraProps = '';
         if (el.querySelector('.progressbar-fill')) {
             const currentProgress = el.querySelector('.progressbar-fill').style.width;
@@ -847,11 +865,11 @@ class RetroBuilder {
             document.getElementById('prop-btn-state').addEventListener('change', (e) => {
                 const btn = el.querySelector('.btn-retro');
                 if (!btn) return;
-                
+
                 // Reset states
                 btn.classList.remove('focused', 'disabled');
                 btn.disabled = false;
-                
+
                 if (e.target.value === 'focused') {
                     btn.classList.add('focused');
                 } else if (e.target.value === 'disabled') {
@@ -866,7 +884,7 @@ class RetroBuilder {
             document.getElementById('prop-aqua-color').addEventListener('change', (e) => {
                 const btn = el.querySelector('.btn-retro');
                 if (!btn) return;
-                
+
                 if (e.target.value === 'blue') {
                     btn.classList.add('aqua-blue');
                 } else {
@@ -900,6 +918,135 @@ class RetroBuilder {
         el.style.zIndex = --this.minZIndex;
     }
 
+    openExportModal() {
+        document.getElementById('export-modal').classList.remove('hidden');
+    }
+
+    closeExportModal() {
+        document.getElementById('export-modal').classList.add('hidden');
+    }
+
+    exportFXML() {
+        const canvasClone = this.canvas.cloneNode(true);
+        const editorElements = canvasClone.querySelectorAll('[data-editor-only="true"]');
+        editorElements.forEach(el => el.remove());
+
+        const theme = this.themeSelector.value;
+        const rawCSS = this.getThemeCSS(theme);
+        const fxCSS = this.convertToJavaFXCSS(rawCSS);
+
+        const fxmlChildren = this.generateFXMLNodes(canvasClone);
+
+        const fxmlContent = `<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<AnchorPane prefHeight="600.0" prefWidth="800.0" stylesheets="@interface-retro.css" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1">
+${fxmlChildren}
+</AnchorPane>`;
+
+        // Download FXML
+        const blobFxml = new Blob([fxmlContent], { type: 'application/xml' });
+        const urlFxml = URL.createObjectURL(blobFxml);
+        const aFxml = document.createElement('a');
+        aFxml.href = urlFxml;
+        aFxml.download = 'interface-retro.fxml';
+        aFxml.click();
+
+        // Download CSS
+        const blobCss = new Blob([fxCSS], { type: 'text/css' });
+        const urlCss = URL.createObjectURL(blobCss);
+        const aCss = document.createElement('a');
+        aCss.href = urlCss;
+        aCss.download = 'interface-retro.css';
+
+        // Timeout para que navegadores permitam downloads sequenciais
+        setTimeout(() => aCss.click(), 200);
+    }
+
+    generateFXMLNodes(parentEl) {
+        let fxmlChildren = '';
+        const widgets = Array.from(parentEl.children);
+
+        widgets.forEach(w => {
+            if (!w.classList.contains('gui-widget')) return;
+
+            let innerText = this.getWidgetText(w) || '';
+            innerText = innerText.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+            const layoutX = parseInt(w.style.left) || 0;
+            const layoutY = parseInt(w.style.top) || 0;
+            const prefWidth = parseInt(w.style.width) || 100;
+            const prefHeight = parseInt(w.style.height) || 100;
+
+            let nodeTag = 'Pane';
+            let attrs = `layoutX="${layoutX}" layoutY="${layoutY}" prefWidth="${prefWidth}" prefHeight="${prefHeight}"`;
+            let styleClass = '';
+            let hasChildren = false;
+
+            if (w.querySelector('.btn-retro')) {
+                nodeTag = 'Button';
+                attrs += ` text="${innerText}"`;
+                styleClass = 'btn-retro';
+            } else if (w.querySelector('.input-retro')) {
+                nodeTag = 'TextField';
+                attrs += ` text="${innerText}"`;
+                styleClass = 'input-retro';
+            } else if (w.querySelector('.label-retro')) {
+                nodeTag = 'Label';
+                attrs += ` text="${innerText}"`;
+                styleClass = 'label-retro';
+            } else if (w.querySelector('.progressbar-retro')) {
+                nodeTag = 'ProgressBar';
+                const fill = w.querySelector('.progressbar-fill');
+                let progress = 0.5;
+                if (fill && fill.style.width) {
+                    progress = parseInt(fill.style.width) / 100;
+                }
+                attrs += ` progress="${progress}"`;
+                styleClass = 'progressbar-retro';
+            } else if (w.dataset?.type === 'groupbox' || w.querySelector('.groupbox-retro')) {
+                nodeTag = 'TitledPane';
+                attrs += ` text="${innerText}" collapsible="false"`;
+                styleClass = 'groupbox-retro';
+            } else if (w.classList.contains('gui-group')) {
+                nodeTag = 'Pane';
+                hasChildren = true;
+            } else {
+                nodeTag = 'Pane';
+            }
+
+            if (styleClass) {
+                attrs += ` styleClass="${styleClass}"`;
+            }
+
+            if (hasChildren) {
+                fxmlChildren += `\n    <${nodeTag} ${attrs}>\n        <children>${this.generateFXMLNodes(w).replace(/\n/g, '\n            ')}\n        </children>\n    </${nodeTag}>`;
+            } else {
+                fxmlChildren += `\n    <${nodeTag} ${attrs} />`;
+            }
+        });
+        return fxmlChildren;
+    }
+
+    convertToJavaFXCSS(css) {
+        let parsed = css.replace(/\.theme-[a-zA-Z0-9-]+\s+/g, '');
+
+        parsed = parsed.replace(/background:\s*(?!none)([^;]+);/g, '-fx-background-color: $1;');
+        parsed = parsed.replace(/background-color:\s*([^;]+);/g, '-fx-background-color: $1;');
+
+        // Simular a conversão de border (simplificado)
+        parsed = parsed.replace(/border:\s*(?!none)[^#]*([^;]+);/g, '-fx-border-color: $1; -fx-border-width: 1px;');
+        parsed = parsed.replace(/border-color:\s*([^;]+);/g, '-fx-border-color: $1;');
+
+        parsed = parsed.replace(/color:\s*([^;]+);/g, '-fx-text-fill: $1;');
+        parsed = parsed.replace(/border-radius:\s*([^;]+);/g, '-fx-background-radius: $1; -fx-border-radius: $1;');
+        parsed = parsed.replace(/padding:\s*([^;]+);/g, '-fx-padding: $1;');
+
+        parsed += `\n\n.root { -fx-font-family: "sans-serif"; -fx-font-size: 12px; }`;
+        return parsed;
+    }
+
     exportLayout() {
         // Clonar para não afetar o canvas real durante a exportação
         const canvasClone = this.canvas.cloneNode(true);
@@ -908,7 +1055,7 @@ class RetroBuilder {
 
         const htmlContent = canvasClone.innerHTML;
         const theme = this.themeSelector.value;
-        
+
         const fullHtml = `
 <!DOCTYPE html>
 <html>
@@ -928,7 +1075,7 @@ class RetroBuilder {
 </body>
 </html>`;
 
-        const blob = new Blob([fullHtml], {type: 'text/html'});
+        const blob = new Blob([fullHtml], { type: 'text/html' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -1003,7 +1150,7 @@ class RetroBuilder {
                 .theme-apple-aqua .progressbar-fill { background: linear-gradient(180deg, #7ebcf6 0%, #3875d7 100%); border-radius: 10px; }
                 .theme-apple-aqua .btn-retro.aqua-blue { background: linear-gradient(180deg, #7ebcf6 0%, #3875d7 100%); border-color: #2c5ba3; color: #fff; text-shadow: 0 -1px 0 rgba(0,0,0,0.3); }
              `
-          };
+        };
 
         return base + (themes[theme] || '');
     }
